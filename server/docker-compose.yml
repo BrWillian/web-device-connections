@@ -1,0 +1,101 @@
+# Standalone stack for exercising the relay on its own — no frontend involved.
+#
+#   cd server
+#   cp .env.example .env        # fill RELAY_SECRET and DEVICE_MASTER_SECRET
+#   docker compose up -d
+#   python scripts/smoke.py     # drives a device + a browser grant end to end
+#
+# Three replicas share one Redis, and an nginx in front of them reproduces the
+# device-id hashing that deploy/k8s/server.yaml relies on. Two ways in:
+#
+#   :8080              the ingress — hashes on the device id, like production.
+#                      A device and every browser session for it land on one pod.
+#   :8001 :8002 :8003  the replicas directly, bypassing the hash. This is what
+#                      makes cross-pod behaviour observable: attach a device to
+#                      :8001 and list it from :8002 to prove presence is shared.
+#
+#   python scripts/smoke.py                                     # crosses replicas
+#   python scripts/smoke.py --a http://localhost:8080 --b http://localhost:8080
+#                                                               # through the ingress
+services:
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  relay-a: &relay
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8000"
+    environment:
+      POD_NAME: relay-a
+      REDIS_URL: redis://redis:6379/0
+      LOG_LEVEL: INFO
+      # Pinned empty on purpose, and it must stay declared here: .env.example ships
+      # ALLOWED_ORIGINS=http://localhost:3000, and env_file would otherwise inject
+      # it. With an allow-list set, a connection carrying no Origin at all is
+      # rejected (security.py: a missing Origin is treated as suspect) — and the
+      # smoke script, having no browser, sends none. Empty disables the check.
+      ALLOWED_ORIGINS: ""
+    env_file:
+      - .env
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  relay-b:
+    <<: *relay
+    ports:
+      - "8002:8000"
+    environment:
+      POD_NAME: relay-b
+      REDIS_URL: redis://redis:6379/0
+      LOG_LEVEL: INFO
+      ALLOWED_ORIGINS: ""   # see relay-a
+
+  relay-c:
+    <<: *relay
+    ports:
+      - "8003:8000"
+    environment:
+      POD_NAME: relay-c
+      REDIS_URL: redis://redis:6379/0
+      LOG_LEVEL: INFO
+      ALLOWED_ORIGINS: ""   # see relay-a
+
+  # Stands in for the Kubernetes ingress. The hashing lives in nginx/ingress.conf;
+  # see deploy/k8s/server.yaml for the annotation form of the same rule.
+  ingress:
+    image: nginx:1.27-alpine
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./nginx/ingress.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      # nginx resolves the upstream names at startup and exits if any is missing.
+      relay-a:
+        condition: service_healthy
+      relay-b:
+        condition: service_healthy
+      relay-c:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
