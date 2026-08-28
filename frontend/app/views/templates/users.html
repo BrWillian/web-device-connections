@@ -1,0 +1,59 @@
+{% extends "_layout.html" %}
+{% import "_macros.html" as m %}
+{% block title %}Usuários · {{ app_name }}{% endblock %}
+
+{% block content %}
+<main class="container">
+  <div class="page-head">
+    <div>
+      <h1 class="page-title">Usuários</h1>
+      <p class="page-sub">Operadores usam terminal e arquivos. Administradores também gerenciam este cadastro.</p>
+    </div>
+    <a class="btn btn-primary" href="/manage/users/novo"><i class="fas fa-plus me-2"></i>Novo usuário</a>
+  </div>
+
+  <div class="table-wrap">
+    {% if users %}
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Usuário</th>
+          <th>Papel</th>
+          <th>Situação</th>
+          <th>Criado em</th>
+          <th class="text-end">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for user in users %}
+        <tr {% if not user.is_active %}class="row-muted"{% endif %}>
+          <td class="cell-strong">
+            {{ user.username }}
+            {% if user.username == username %}<span class="text-muted">(você)</span>{% endif %}
+          </td>
+          <td>{{ m.badge(role_labels.get(user.role, user.role), 'accent' if user.role == 'admin' else 'neutral') }}</td>
+          <td>{{ m.badge('Ativo' if user.is_active else 'Desativado', 'ok' if user.is_active else 'off') }}</td>
+          <td>{{ user.created_at | datetime_br }}</td>
+          <td class="row-actions">
+            {{ m.link_button('/manage/users/' ~ user.id, 'fa-pen', 'Editar') }}
+            {% if user.is_active %}
+              {{ m.post_button('/manage/users/' ~ user.id ~ '/desativar', 'fa-user-slash', 'Desativar') }}
+            {% else %}
+              {{ m.post_button('/manage/users/' ~ user.id ~ '/ativar', 'fa-user-check', 'Reativar') }}
+            {% endif %}
+            {{ m.link_button('/manage/users/' ~ user.id ~ '/excluir', 'fa-trash', 'Excluir', 'danger') }}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+      <i class="fas fa-users"></i>
+      <h5>Nenhum usuário</h5>
+      <p>Cadastre o primeiro para começar</p>
+    </div>
+    {% endif %}
+  </div>
+</main>
+{% endblock %}

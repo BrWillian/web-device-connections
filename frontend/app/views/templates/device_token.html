@@ -1,0 +1,54 @@
+{% extends "_layout.html" %}
+{% block title %}Token de {{ device.device_id }} · {{ app_name }}{% endblock %}
+
+{% block content %}
+<main class="container">
+  <div class="page-head">
+    <div>
+      <h1 class="page-title">Token de {{ device.device_id }}</h1>
+      <p class="page-sub">Coloque estas linhas no <code>.env</code> do dispositivo.</p>
+    </div>
+    <a class="btn btn-outline-secondary" href="/manage/devices">Voltar</a>
+  </div>
+
+  <div class="form-card">
+    {# Selectable and read-only rather than a <pre>: without the clipboard API —
+       which browsers withhold outside a secure context — selecting the text is
+       the fallback that always works. #}
+    <textarea class="token-box" id="tokenBox" rows="2" readonly
+              aria-label="Credenciais do dispositivo">{{ env_lines }}</textarea>
+
+    <div class="form-hint mt-2">
+      O token é derivado do <code>device_id</code> e não fica armazenado em lugar
+      algum — pode ser consultado aqui de novo quando precisar.
+    </div>
+
+    <div class="d-flex gap-2 mt-3">
+      <button type="button" class="btn btn-primary" id="copyTokenBtn">
+        <i class="fas fa-copy me-2"></i>Copiar
+      </button>
+      <a class="btn btn-outline-secondary" href="/manage/devices">Concluir</a>
+    </div>
+  </div>
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // The only script on this page. Copying to the clipboard is something a
+  // browser does; the fallback is the selectable box above.
+  document.getElementById('copyTokenBtn').addEventListener('click', function () {
+    var box = document.getElementById('tokenBox');
+    box.select();
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(box.value).catch(function () { /* selection stands */ });
+      ok = true;
+    }
+    this.innerHTML = ok
+      ? '<i class="fas fa-check me-2"></i>Copiado'
+      : '<i class="fas fa-copy me-2"></i>Selecione e copie';
+  });
+</script>
+{% endblock %}

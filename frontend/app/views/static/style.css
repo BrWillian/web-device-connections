@@ -1,0 +1,887 @@
+[data-theme="dark"] {
+  --bg: #1a1a20;
+  --surface: #232329;
+  --surface-hover: #2c2c34;
+  --header-bg: rgba(26, 26, 32, 0.8);
+  --border: #35353e;
+  --border-hover: #4b4b56;
+  --text: #f2f2f5;
+  --text-muted: #9d9da8;
+  --accent: #6366f1;
+  --accent-hover: #818cf8;
+  --accent-soft: rgba(99, 102, 241, 0.14);
+  --danger: #f87171;
+  --success: #4ade80;
+  --warning: #fbbf24;
+  --input-bg: #1e1e25;
+  --modal-bg: #232329;
+  --shadow: 0 10px 30px rgba(12, 12, 16, 0.45);
+  color-scheme: dark;
+}
+
+[data-theme="light"] {
+  --bg: #fafafa;
+  --surface: #ffffff;
+  --surface-hover: #f4f4f5;
+  --header-bg: rgba(250, 250, 250, 0.8);
+  --border: #e4e4e7;
+  --border-hover: #d0d0d5;
+  --text: #18181b;
+  --text-muted: #71717a;
+  --accent: #4f46e5;
+  --accent-hover: #6366f1;
+  --accent-soft: rgba(79, 70, 229, 0.1);
+  --danger: #dc2626;
+  --success: #16a34a;
+  --warning: #d97706;
+  --input-bg: #ffffff;
+  --modal-bg: #ffffff;
+  --shadow: 0 10px 30px rgba(24, 24, 27, 0.1);
+  color-scheme: light;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, system-ui, sans-serif;
+  margin: 0;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+/* ---------- Header ---------- */
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 1040;
+  background: var(--header-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+}
+
+.header-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0.85rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+.brand-logo {
+  height: 1.6rem;
+}
+
+.brand-name {
+  font-weight: 700;
+  font-size: 1rem;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+.search-bar {
+  position: relative;
+  flex: 1;
+  max-width: 420px;
+  margin-left: auto;
+}
+
+.search-bar::before {
+  content: "\f002";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
+  position: absolute;
+  left: 0.9rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  pointer-events: none;
+}
+
+.search-bar input {
+  width: 100%;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.55rem 2.4rem 0.55rem 2.4rem;
+  color: var(--text);
+  font-size: 0.875rem;
+  font-family: inherit;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.search-bar input::placeholder {
+  color: var(--text-muted);
+}
+
+.search-bar input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.icon-btn:hover {
+  color: var(--text);
+  border-color: var(--border-hover);
+  background: var(--surface-hover);
+}
+
+/* ---------- Layout ---------- */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem 4rem;
+}
+
+.cards-grid {
+  display: grid;
+  /* Three at most. auto-fill with a 250px minimum gave four columns inside the
+     1200px container, which left the cards too narrow for their own padding.
+     minmax(0, 1fr) rather than 1fr so a long device id ellipsises instead of
+     forcing the column wider than its share. */
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+@media (max-width: 900px) {
+  .cards-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .cards-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ---------- Device card ---------- */
+/* Flat by design: one border, one hover state, no lift and no shadow. The old
+   card leaned on an accent icon tile, a scale-on-hover, a pulsing dot and a
+   translate — four moving parts on a grid where every card is identical. What
+   the operator actually reads is the name, what the device is for, whether it is
+   online, and the three things they can do to it. */
+.device-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.125rem 1.25rem;
+  display: flex;
+  align-items: stretch;
+  gap: 0.875rem;
+  transition: border-color 0.18s ease;
+}
+
+.device-card:hover,
+/* Keyboard users reach the card through its buttons, so the container reacts to
+   focus inside it as well — otherwise tabbing across the grid gives no feedback
+   about which card you are on. */
+.device-card:focus-within {
+  border-color: var(--border-hover);
+}
+
+/* ---- Rail with the device mark ---- */
+/* A column of its own, not a slot in the name row: sharing that row with the
+   three action buttons squeezed the text column until "id · uptime · pod"
+   wrapped on every card. No background and no shadow behind the glyph — the
+   mark is a label, and a tinted block around it only competes with the name. */
+.device-rail {
+  flex-shrink: 0;
+  width: 27px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+}
+
+.device-card:hover .device-rail {
+  color: var(--accent);
+}
+
+.ssh-icon {
+  display: block;
+}
+
+.device-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.device-card-head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* ---- Name and status ---- */
+.device-name {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+
+.device-name-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.device-dot {
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--success);
+  /* The grid only ever lists devices the relay reports as online, so this is a
+     quiet confirmation, not an alert. It used to pulse on every card at once. */
+  box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.18);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--success) 18%, transparent);
+}
+
+/* ---- Description ---- */
+/* The hierarchy between this and the meta line is carried by size alone. There
+   is no mid-tone between --text and --text-muted, and inventing one per theme
+   is how a palette starts to rot. */
+.device-desc {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--text-muted);
+  /* Two lines at most: one verbose entry must not decide the row height for
+     every other card in the grid. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ---- Meta line ---- */
+.device-meta {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+/* Each part is unbreakable and carries its own trailing separator, so a wrap
+   happens only between parts. As a ::before on the following part, the dot
+   landed at the start of the new line and read as a bullet list. */
+.device-meta > * {
+  white-space: nowrap;
+}
+
+.device-meta > *:not(:last-child)::after {
+  content: '·';
+  margin-left: 0.4rem;
+  opacity: 0.55;
+}
+
+.device-id {
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  letter-spacing: -0.01em;
+}
+
+.device-uptime {
+  /* The grid is re-rendered on a timer, and proportional digits made the whole
+     line shift sideways every time the seconds changed. */
+  font-variant-numeric: tabular-nums;
+}
+
+.device-pod {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---- Unregistered flag ---- */
+.device-flag {
+  align-self: flex-start;
+  margin: 0.125rem 0 0;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 6px;
+  background: rgba(251, 191, 36, 0.12);
+  background: color-mix(in srgb, var(--warning) 12%, transparent);
+  color: var(--warning);
+  font-size: 0.6875rem;
+  font-weight: 500;
+}
+
+/* ---- Actions ---- */
+.device-actions {
+  flex-shrink: 0;
+  display: flex;
+  gap: 0.125rem;
+}
+
+/* Borderless and muted at rest: three outlined buttons per card turned the grid
+   into a wall of boxes. They stay visible rather than appearing on hover, which
+   would put them out of reach on a touch screen. */
+.device-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.device-action:hover {
+  background: var(--surface-hover);
+}
+
+.device-action:focus-visible {
+  outline: none;
+  color: var(--text);
+  background: var(--surface-hover);
+  box-shadow: 0 0 0 2px var(--accent-soft), 0 0 0 3px var(--accent);
+}
+
+.device-action-terminal:hover { color: var(--success); }
+.device-action-upload:hover { color: var(--warning); }
+.device-action-download:hover { color: var(--accent); }
+
+@media (prefers-reduced-motion: reduce) {
+  .device-card,
+  .device-rail,
+  .device-action {
+    transition: none;
+  }
+}
+
+/* ---------- Empty state ---------- */
+.empty-state {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 4rem 1rem;
+  color: var(--text-muted);
+}
+
+.empty-state i {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+  opacity: 0.5;
+}
+
+.empty-state h5 {
+  margin-bottom: 0.25rem;
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--text);
+}
+
+.empty-state p {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+/* ---------- Modals ---------- */
+/* Defined here rather than borrowed from Bootstrap, so the scroll lock still works
+   when the CDN does not answer. Set and cleared by makeModal(). */
+body.modal-open {
+  overflow: hidden;
+}
+
+.modal {
+  /* Explicit, rather than inherited from Bootstrap's stylesheet: this rule makes
+     the modal a full-viewport fixed layer, so if the Bootstrap CSS fails to load
+     the hidden modals would otherwise cover the page and swallow every click. */
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 1050;
+  padding: 1rem;
+  background: rgba(17, 17, 22, 0.55);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.modal.show {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-dialog {
+  width: 100%;
+  max-width: 440px;
+  margin: 0 auto;
+}
+
+.modal-content {
+  background: var(--modal-bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  color: var(--text);
+  box-shadow: var(--shadow);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid var(--border);
+  padding: 1.1rem 1.25rem;
+}
+
+.btn-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-close:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.modal-title {
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.modal-title span {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.modal-body {
+  padding: 1.25rem;
+}
+
+.modal-footer {
+  border-top: 1px solid var(--border);
+  padding: 1rem 1.25rem;
+  gap: 0.5rem;
+}
+
+/* ---------- Forms ---------- */
+.form-control {
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  padding: 0.6rem 0.9rem;
+  font-size: 0.9rem;
+}
+
+.form-control::placeholder {
+  color: var(--text-muted);
+}
+
+.form-control:focus {
+  background: var(--input-bg);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+  color: var(--text);
+}
+
+.form-label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-bottom: 0.4rem;
+}
+
+.btn-primary {
+  background: var(--accent);
+  border: none;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.6rem 1.25rem;
+  transition: background 0.2s ease;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+  color: #fff;
+}
+
+.btn-primary:disabled {
+  background: var(--border);
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+.btn-outline-secondary {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  font-weight: 500;
+  padding: 0.6rem 1.25rem;
+  transition: all 0.2s ease;
+}
+
+.btn-outline-secondary:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+  border-color: var(--border-hover);
+}
+
+.progress {
+  background: var(--border);
+  border-radius: 99px;
+  height: 6px !important;
+}
+
+.progress-bar {
+  background: var(--accent);
+  border-radius: 99px;
+  transition: width 0.3s ease;
+}
+
+.alert-danger {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: var(--danger);
+  border-radius: 10px;
+  font-size: 0.875rem;
+}
+
+/* ---------- Login ---------- */
+.login-page {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 380px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 2.5rem 2rem;
+  box-shadow: var(--shadow);
+}
+
+.login-card img {
+  height: 3rem;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 640px) {
+  .header-inner {
+    flex-wrap: wrap;
+    padding: 0.75rem 1rem;
+  }
+
+  .search-bar {
+    order: 3;
+    flex-basis: 100%;
+    max-width: none;
+    margin-left: 0;
+  }
+
+  .brand-name {
+    font-size: 0.95rem;
+  }
+
+  .container {
+    padding: 1.5rem 1rem 3rem;
+  }
+}
+
+/* ---------- Management pages ---------- */
+.brand-link {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.page-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.75rem;
+}
+
+.page-title {
+  margin: 0 0 0.35rem 0;
+  font-size: 1.4rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.page-sub {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  max-width: 62ch;
+}
+
+.table-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  /* The table can outgrow a narrow screen; scroll it here rather than letting
+     the page itself scroll sideways. */
+  overflow-x: auto;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.data-table th {
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.data-table td {
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  vertical-align: middle;
+}
+
+.data-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.data-table tbody tr:hover {
+  background: var(--accent-soft);
+}
+
+/* Deactivated users and revoked devices: still legible, visibly not in play. */
+.data-table tr.row-muted td {
+  opacity: 0.55;
+}
+
+.cell-strong {
+  font-weight: 600;
+}
+
+.cell-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.badge-pill {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.badge-accent { background: var(--accent-soft); color: var(--accent); }
+.badge-neutral { background: var(--border); color: var(--text-muted); }
+.badge-ok { background: rgba(74, 222, 128, 0.16); color: #22c55e; }
+.badge-off { background: rgba(248, 113, 113, 0.16); color: #ef4444; }
+
+.row-actions {
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Row actions are a mix of links (navigate to a page) and single-button forms
+   (POST a mutation), so this has to look identical on an <a> and a <button>. */
+.row-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  margin-left: 0.35rem;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.18s ease;
+}
+
+.row-actions form.d-inline {
+  display: inline;
+}
+
+.row-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.row-btn-danger:hover {
+  border-color: #ef4444;
+  color: #ef4444;
+  background: rgba(248, 113, 113, 0.12);
+}
+
+.form-hint {
+  margin-top: 0.4rem;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.token-box {
+  background: var(--modal-bg, var(--surface));
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.8rem;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-all;
+  /* A <textarea>, so the operator can always select the text by hand when the
+     clipboard API is unavailable (it is, outside a secure context). */
+  width: 100%;
+  resize: vertical;
+}
+
+@media (max-width: 600px) {
+  .page-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+
+/* --------------------------------------------------------------------------
+   Server-rendered pages: flash messages, forms and confirmation screens.
+   -------------------------------------------------------------------------- */
+
+/* The result of a POST, carried across the redirect that follows it. Sits
+   between the header and the page so it is read before anything is clicked. */
+.flash-wrap {
+  margin-top: 1.25rem;
+  margin-bottom: -0.5rem;
+}
+
+.form-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1.5rem;
+  max-width: 560px;
+}
+
+.form-card .form-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.confirm-card {
+  margin: 0 auto;
+  text-align: center;
+}
+
+.confirm-card .page-sub {
+  margin: 0 auto 0.5rem;
+}
+
+.confirm-card .d-flex {
+  justify-content: center;
+}
+
+.confirm-icon {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 1rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.35rem;
+}
+
+.confirm-icon.confirm-danger {
+  background: rgba(248, 113, 113, 0.14);
+  color: #ef4444;
+}
+
+.confirm-icon.confirm-warning {
+  background: rgba(251, 191, 36, 0.16);
+  color: #f59e0b;
+}

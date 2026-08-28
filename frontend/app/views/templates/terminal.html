@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <title>Terminal · {{ app_name }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
+  <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
+  <style>
+    html, body { margin: 0; height: 100%; background-color: #1a1a1a; }
+    #terminal { width: 100%; height: 100%; }
+  </style>
+</head>
+<body>
+  <div id="terminal"></div>
+
+  <script src="/config.js"></script>
+  <script src="{{ asset('api.js') }}"></script>
+  <script>
+    (function () {
+      'use strict';
+
+      // xterm.js is the terminal, so unlike the dashboard there is no degraded
+      // mode to fall back to — but a blank black page is not a useful failure.
+      if (typeof Terminal === 'undefined' || typeof FitAddon === 'undefined') {
+        document.getElementById('terminal').innerHTML =
+          '<div style="color:#ddd;font:14px/1.6 ui-monospace,monospace;padding:1.5rem">'
+          + 'A biblioteca do terminal (xterm.js) não pôde ser carregada.<br>'
+          + 'Verifique o acesso a <code>cdn.jsdelivr.net</code> — em redes restritas '
+          + 'os arquivos precisam ser servidos junto com a aplicação.</div>';
+        return;
+      }
+
+      const term = new Terminal({
+        cursorBlink: true,
+        convertEol: true,
+        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+        theme: { background: '#1a1a1a', foreground: '#ffffff' }
+      });
+      const fitAddon = new FitAddon.FitAddon();
+      term.loadAddon(fitAddon);
+      term.open(document.getElementById('terminal'));
+      fitAddon.fit();
+
+      // Rendered by the server, which already required a session to serve this page.
+      const deviceId = {{ device_id | tojson }};
+      const sessionId = crypto.randomUUID();
+      let socket = null;
+
+      if (!deviceId) {
+        term.writeln('\r\n[Nenhum dispositivo informado na URL.]');
+        return;
+      }
+
+      document.title = deviceId + ' · Terminal';
+
+      function sendResize() {
+        if (socket && socket.readyState === WebSocket.OPEN) {
+          socket.send(JSON.stringify({
+            type: 'resize', session_id: sessionId, cols: term.cols, rows: term.rows
+          }));
+        }
+      }
+
+      term.onData((data) => {
+        if (socket && socket.readyState === WebSocket.OPEN) {
+          socket.send(JSON.stringify({ type: 'input', session_id: sessionId, data }));
+        }
+      });
+
+      window.addEventListener('resize', () => { fitAddon.fit(); sendResize(); });
+
+      (async function connect() {
+        term.writeln('Conectando a ' + deviceId + '…');
+        try {
+          // openDeviceWS asks this app for a one-shot grant first, then opens the
+          // socket straight to the relay.
+          socket = await WDC.openDeviceWS(
+            '/terminal/' + encodeURIComponent(deviceId), deviceId, 'terminal'
+          );
+        } catch (err) {
+          term.writeln('\r\n[Não autorizado: ' + (err.message || 'falha ao obter autorização') + ']');
+          return;
+        }
+
+        socket.onopen = () => {
+          socket.send(JSON.stringify({ type: 'start_session', session_id: sessionId }));
+          fitAddon.fit();
+          sendResize();
+        };
+
+        socket.onmessage = (event) => {
+          let data;
+          try { data = JSON.parse(event.data); } catch (e) { return; }
+          if (data.error) { term.writeln('\r\n[' + data.error + ']'); return; }
+          if (data.type === 'output' && data.session_id === sessionId) {
+            term.write(data.data);
+          }
+        };
+
+        socket.onclose = (event) => {
+          term.writeln(event.code === 4401
+            ? '\r\n[Sessão não autorizada ou autorização expirada]'
+            : '\r\n[Conexão encerrada]');
+        };
+        socket.onerror = () => term.writeln('\r\n[Erro de conexão]');
+      })();
+    })();
+  </script>
+</body>
+</html>

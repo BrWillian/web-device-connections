@@ -1,0 +1,64 @@
+{% extends "_layout.html" %}
+{% block title %}{{ 'Editar usuário' if user else 'Novo usuário' }} · {{ app_name }}{% endblock %}
+
+{% block content %}
+<main class="container">
+  <div class="page-head">
+    <div>
+      <h1 class="page-title">{{ 'Editar ' ~ user.username if user else 'Novo usuário' }}</h1>
+      <p class="page-sub">
+        {{ 'Deixe a senha em branco para manter a atual.' if user else 'O nome de usuário não pode ser alterado depois.' }}
+      </p>
+    </div>
+    <a class="btn btn-outline-secondary" href="/manage/users">Voltar</a>
+  </div>
+
+  <div class="form-card">
+    {# Validation lives in services.py; a failure re-renders this page with the
+       message and the values the operator typed, so nothing has to be retyped. #}
+    <form method="post" action="{{ '/manage/users/' ~ user.id if user else '/manage/users' }}">
+      <div class="mb-3">
+        <label for="username" class="form-label">Usuário</label>
+        <input type="text" class="form-control" id="username" name="username" autocomplete="off"
+               value="{{ form.username | default('', true) }}"
+               {% if user %}disabled{% else %}required autofocus{% endif %}>
+      </div>
+
+      <div class="mb-3">
+        <label for="password" class="form-label">Senha</label>
+        <input type="password" class="form-control" id="password" name="password"
+               autocomplete="new-password" {% if not user %}required{% endif %}>
+        <div class="form-hint">
+          Mínimo de {{ min_password_length }} caracteres.{% if user %} Em branco = manter a atual.{% endif %}
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label for="role" class="form-label">Papel</label>
+        <select id="role" name="role" class="form-select">
+          {% for value, label in role_labels.items() %}
+          <option value="{{ value }}" {% if form.role | default('operator') == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      {% if user %}
+      <div class="form-check mb-4">
+        {# The hidden field is what makes an unchecked box mean "false". An
+           unchecked checkbox is simply not submitted, so without it the server
+           could not tell "deactivate" from "left alone". #}
+        <input type="hidden" name="is_active" value="false">
+        <input class="form-check-input" type="checkbox" id="is_active" name="is_active" value="true"
+               {% if form.is_active %}checked{% endif %}>
+        <label class="form-check-label" for="is_active">Ativo</label>
+      </div>
+      {% endif %}
+
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Salvar</button>
+        <a class="btn btn-outline-secondary" href="/manage/users">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</main>
+{% endblock %}

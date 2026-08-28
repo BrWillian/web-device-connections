@@ -1,0 +1,58 @@
+{% extends "_layout.html" %}
+{% import "_macros.html" as m %}
+{% block title %}Dispositivos · {{ app_name }}{% endblock %}
+
+{% block content %}
+<main class="container">
+  <div class="page-head">
+    <div>
+      <h1 class="page-title">Dispositivos</h1>
+      <p class="page-sub">Cadastro da frota. Revogar bloqueia o acesso do dispositivo ao relay.</p>
+    </div>
+    <a class="btn btn-primary" href="/manage/devices/novo"><i class="fas fa-plus me-2"></i>Novo dispositivo</a>
+  </div>
+
+  <div class="table-wrap">
+    {% if devices %}
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Nome</th>
+          <th>device_id</th>
+          <th>Responsável</th>
+          <th>Situação</th>
+          <th class="text-end">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for device in devices %}
+        <tr {% if device.is_revoked %}class="row-muted"{% endif %}>
+          <td class="cell-strong">{{ device.name }}</td>
+          <td class="cell-mono">{{ device.device_id }}</td>
+          <td>{{ device.owner | blank }}</td>
+          <td>{{ m.badge('Revogado' if device.is_revoked else 'Liberado', 'off' if device.is_revoked else 'ok') }}</td>
+          <td class="row-actions">
+            {{ m.link_button('/manage/devices/' ~ device.id ~ '/token', 'fa-key', 'Ver token') }}
+            {{ m.link_button('/manage/devices/' ~ device.id, 'fa-pen', 'Editar') }}
+            {% if device.is_revoked %}
+              {# Un-revoking restores access, so it needs no warning screen. #}
+              {{ m.post_button('/manage/devices/' ~ device.id ~ '/liberar', 'fa-unlock', 'Liberar') }}
+            {% else %}
+              {{ m.link_button('/manage/devices/' ~ device.id ~ '/revogar', 'fa-ban', 'Revogar', 'danger') }}
+            {% endif %}
+            {{ m.link_button('/manage/devices/' ~ device.id ~ '/excluir', 'fa-trash', 'Excluir', 'danger') }}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+      <i class="fas fa-microchip"></i>
+      <h5>Nenhum dispositivo cadastrado</h5>
+      <p>Cadastre um para obter o token de provisionamento</p>
+    </div>
+    {% endif %}
+  </div>
+</main>
+{% endblock %}

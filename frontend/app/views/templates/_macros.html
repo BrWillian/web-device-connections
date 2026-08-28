@@ -1,0 +1,39 @@
+{# The table pieces that manage.js used to build with document.createElement. #}
+
+{% macro badge(text, kind) -%}
+<span class="badge-pill badge-{{ kind }}">{{ text }}</span>
+{%- endmacro %}
+
+{# A destructive action is a POST, so it cannot be triggered by a stray GET —
+   a prefetch, a crawler, or an <img src>. #}
+{% macro post_button(action, icon, label, kind='') -%}
+<form action="{{ action }}" method="post" class="d-inline">
+  <button type="submit" class="row-btn{{ ' row-btn-' ~ kind if kind }}"
+          title="{{ label }}" aria-label="{{ label }}">
+    <i class="fas {{ icon }}"></i>
+  </button>
+</form>
+{%- endmacro %}
+
+{% macro link_button(href, icon, label, kind='') -%}
+<a href="{{ href }}" class="row-btn{{ ' row-btn-' ~ kind if kind }}"
+   title="{{ label }}" aria-label="{{ label }}"><i class="fas {{ icon }}"></i></a>
+{%- endmacro %}
+
+{# Font Awesome Free has no SSH glyph — only fa-terminal, which is already the
+   card's "open terminal" button — so the device mark is drawn here instead of
+   pulled from the icon font. A terminal window with a prompt reads as SSH and
+   stays distinct from the bare >_ on the action button.
+
+   Four strokes and no title bar on purpose: at 19px the extra window chrome
+   turned the prompt into a smudge, and the prompt is the part that carries the
+   meaning. currentColor so it follows the theme like every other icon. #}
+{% macro ssh_icon(size=19) -%}
+<svg class="ssh-icon" width="{{ size }}" height="{{ size }}" viewBox="0 0 24 24"
+     fill="none" stroke="currentColor" stroke-width="1.9"
+     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+  <rect x="2.5" y="4" width="19" height="16" rx="3" />
+  <path d="m7.5 10.5 3 3-3 3" />
+  <path d="M13.5 16.5h4" />
+</svg>
+{%- endmacro %}

@@ -1,0 +1,86 @@
+{% extends "_layout.html" %}
+{% block title %}{{ app_name }}{% endblock %}
+
+{% block header_middle %}
+{# A plain GET form: submitting reloads the page with ?q=, and the filtering
+   happens in Python. Works with JavaScript disabled and survives a bookmark. #}
+<form class="search-bar" method="get" action="/" role="search">
+  <input type="search" name="q" value="{{ query }}"
+         placeholder="Buscar dispositivos..." aria-label="Buscar dispositivos" />
+</form>
+{% endblock %}
+
+{% block content %}
+<main class="container">
+  <div class="cards-grid" id="cards">
+    {% include "_device_cards.html" %}
+  </div>
+</main>
+{% endblock %}
+
+{% block modals %}
+<!-- Upload -->
+<div class="modal fade" id="uploadModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Enviar arquivo para <span id="uploadDeviceId"></span></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <input type="file" id="uploadFileInput" class="d-none" />
+        <div class="mb-4">
+          <label class="form-label">Arquivo selecionado</label>
+          <div class="d-flex align-items-center gap-3">
+            <button class="btn btn-primary" id="selectFileBtn"><i class="fas fa-file-import me-2"></i>Escolher arquivo</button>
+            <span id="uploadFileName" class="text-muted" style="font-size: 0.875rem;">nenhum</span>
+          </div>
+        </div>
+        <div class="mb-4">
+          <label for="uploadDest" class="form-label">Destino no dispositivo</label>
+          <input type="text" id="uploadDest" class="form-control" placeholder="Ex: ~/Downloads/ ou /tmp/arquivo.txt" />
+        </div>
+        <div class="progress" style="height: 6px;">
+          <div id="uploadProgressBar" class="progress-bar" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" id="cancelUploadBtn" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="confirmUploadBtn" disabled>Enviar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Download -->
+<div class="modal fade" id="downloadModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Baixar arquivo de <span id="downloadDeviceId"></span></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-4">
+          <label for="downloadPath" class="form-label">Caminho no dispositivo</label>
+          <input type="text" id="downloadPath" class="form-control" placeholder="Ex: ~/Downloads/arquivo.txt ou /var/log/syslog" />
+        </div>
+        <div class="progress" style="height: 6px;">
+          <div id="downloadProgressBar" class="progress-bar" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" id="cancelDownloadBtn" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="confirmDownloadBtn">Baixar</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/config.js"></script>
+<script src="{{ asset('api.js') }}"></script>
+<script src="{{ asset('common.js') }}"></script>
+<script src="{{ asset('script.js') }}"></script>
+{% endblock %}

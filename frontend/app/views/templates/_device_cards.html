@@ -1,0 +1,78 @@
+{# The fleet grid. Rendered on page load and re-rendered by /partials/devices,
+   so the markup exists once and the browser never builds a card itself. #}
+{% from "_macros.html" import ssh_icon %}
+{% if error %}
+<div class="empty-state">
+  <i class="fas fa-plug"></i>
+  <h5>{{ error }}</h5>
+  <p>{{ error_detail }}</p>
+</div>
+{% elif not devices %}
+<div class="empty-state">
+  <i class="fas fa-plug"></i>
+  {% if query %}
+  <h5>Nenhum dispositivo encontrado</h5>
+  <p>Nada corresponde a "{{ query }}"</p>
+  {% else %}
+  <h5>Nenhum dispositivo conectado</h5>
+  <p>Conecte um dispositivo para aparecer na lista</p>
+  {% endif %}
+</div>
+{% else %}
+{% for device in devices %}
+{# The card is the grid item itself: the wrapper div it used to sit inside did
+   nothing but add a node between the grid and its child.
+
+   The mark sits in a rail of its own rather than inside the name row. Sharing
+   that row with the three action buttons left the text column so narrow that
+   "id · uptime · pod" wrapped onto a second line on every card. #}
+<article class="device-card">
+  <span class="device-rail">{{ ssh_icon() }}</span>
+
+  <div class="device-body">
+    <div class="device-card-head">
+      <h3 class="device-name" title="{{ device.id }}">
+        {# Decorative: the meta line below already says the device is online, so
+           a screen reader gains nothing from reading the dot as well. #}
+        <span class="device-dot" aria-hidden="true"></span>
+        <span class="device-name-text">{{ device.name or device.id }}</span>
+      </h3>
+
+      <div class="device-actions">
+        {# The terminal is a normal link: it opens a page that is served only to
+           a signed-in browser. Only the two transfer buttons need JavaScript. #}
+        <a class="device-action device-action-terminal" target="_blank" rel="noopener"
+           href="/terminal?device={{ device.id | urlencode }}"
+           title="Terminal" aria-label="Terminal — {{ device.id }}"><i class="fas fa-terminal"></i></a>
+        <button class="device-action device-action-upload" data-action="upload" data-device="{{ device.id }}"
+                title="Enviar" aria-label="Enviar — {{ device.id }}"><i class="fas fa-arrow-up"></i></button>
+        <button class="device-action device-action-download" data-action="download" data-device="{{ device.id }}"
+                title="Baixar" aria-label="Baixar — {{ device.id }}"><i class="fas fa-arrow-down"></i></button>
+      </div>
+    </div>
+
+    {% if device.description %}
+    {# Clamped to two lines in CSS: one verbose entry must not set the row height
+       for every other card beside it. #}
+    <p class="device-desc">{{ device.description }}</p>
+    {% endif %}
+
+    {# Separators are drawn by CSS between the parts that survive, so a device
+       with no name or no pod does not leave a stray middle dot behind. #}
+    <p class="device-meta">
+      {% if device.name %}<span class="device-id">{{ device.id }}</span>{% endif %}
+      <span class="device-uptime">online há {{ device.uptime_seconds | uptime }}</span>
+      {% if device.pod %}<span class="device-pod">{{ device.pod }}</span>{% endif %}
+    </p>
+
+    {% if not device.registered %}
+    {# Worth surfacing: the relay accepts any device whose derived token checks
+       out, registry or not. This is how an operator notices one they did not put
+       there — as readable text now, instead of a question mark whose meaning was
+       hidden in a title attribute. #}
+    <p class="device-flag"><i class="fas fa-circle-exclamation" aria-hidden="true"></i>Não cadastrado</p>
+    {% endif %}
+  </div>
+</article>
+{% endfor %}
+{% endif %}

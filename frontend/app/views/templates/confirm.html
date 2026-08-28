@@ -1,0 +1,27 @@
+{% extends "_layout.html" %}
+{% block title %}{{ title }} · {{ app_name }}{% endblock %}
+
+{# A page rather than a window.confirm(). The destructive actions here carry
+   consequences that need more than one line to explain, and a confirm() dialog
+   shows plain text in a box the operator is trained to dismiss. #}
+{% block content %}
+<main class="container">
+  <div class="form-card confirm-card">
+    <div class="confirm-icon confirm-{{ tone | default('danger') }}">
+      <i class="fas {{ icon | default('fa-triangle-exclamation') }}"></i>
+    </div>
+    <h1 class="page-title">{{ title }}</h1>
+
+    {% for paragraph in body %}
+    <p class="page-sub">{{ paragraph }}</p>
+    {% endfor %}
+
+    <div class="d-flex gap-2 mt-4">
+      <form method="post" action="{{ action }}">
+        <button type="submit" class="btn btn-{{ tone | default('danger') }}">{{ confirm_label }}</button>
+      </form>
+      <a class="btn btn-outline-secondary" href="{{ cancel_url }}">Cancelar</a>
+    </div>
+  </div>
+</main>
+{% endblock %}

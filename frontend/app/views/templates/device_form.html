@@ -1,0 +1,58 @@
+{% extends "_layout.html" %}
+{% block title %}{{ 'Editar dispositivo' if device else 'Novo dispositivo' }} · {{ app_name }}{% endblock %}
+
+{% block content %}
+<main class="container">
+  <div class="page-head">
+    <div>
+      <h1 class="page-title">{{ 'Editar ' ~ device.device_id if device else 'Novo dispositivo' }}</h1>
+      <p class="page-sub">
+        {% if device %}O device_id não pode mudar — o token do dispositivo é derivado dele.
+        {% else %}Depois de salvar, use "Ver token" para pegar as linhas do <code>.env</code> do dispositivo.{% endif %}
+      </p>
+    </div>
+    <a class="btn btn-outline-secondary" href="/manage/devices">Voltar</a>
+  </div>
+
+  <div class="form-card">
+    <form method="post" action="{{ '/manage/devices/' ~ device.id if device else '/manage/devices' }}">
+      <div class="mb-3">
+        <label for="device_id" class="form-label">device_id</label>
+        <input type="text" class="form-control cell-mono" id="device_id" name="device_id"
+               autocomplete="off" placeholder="device-01"
+               value="{{ form.device_id | default('', true) }}"
+               {% if device %}disabled{% else %}required autofocus{% endif %}>
+        {% if not device %}
+        <div class="form-hint">
+          Letras, números, <code>-</code>, <code>_</code> e <code>.</code>. O token é derivado
+          deste valor, então ele não pode mudar depois de criado.
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="mb-3">
+        <label for="name" class="form-label">Nome</label>
+        <input type="text" class="form-control" id="name" name="name" required
+               placeholder="Dispositivo da linha 3" value="{{ form.name | default('', true) }}">
+      </div>
+
+      <div class="mb-3">
+        <label for="owner" class="form-label">Responsável</label>
+        <input type="text" class="form-control" id="owner" name="owner"
+               placeholder="Opcional" value="{{ form.owner | default('', true) }}">
+      </div>
+
+      <div class="mb-4">
+        <label for="description" class="form-label">Descrição</label>
+        <textarea class="form-control" id="description" name="description" rows="2"
+                  placeholder="Opcional">{{ form.description | default('', true) }}</textarea>
+      </div>
+
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Salvar</button>
+        <a class="btn btn-outline-secondary" href="/manage/devices">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</main>
+{% endblock %}
