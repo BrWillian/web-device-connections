@@ -48,7 +48,7 @@ spec:
             initialDelaySeconds: 10
             periodSeconds: 30
           resources:
-            requests: { cpu: 100m, memory: 128Mi }
+            requests: { cpu: 100m, memory: 256Mi }
             limits:   { cpu: 500m, memory: 512Mi }
       # Devices reconnect on their own, but draining slowly lets in-flight
       # terminal sessions finish instead of being cut mid-command.
