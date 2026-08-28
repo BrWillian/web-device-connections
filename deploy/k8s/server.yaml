@@ -1,0 +1,102 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wdc-relay
+  labels: { app: wdc-relay }
+spec:
+  # Scale here, never with uvicorn --workers: multiple workers share one port and
+  # the kernel picks between them arbitrarily, so an individual worker cannot be
+  # addressed by the ingress. One process per pod is what makes hashing work.
+  replicas: 3
+  selector:
+    matchLabels: { app: wdc-relay }
+  template:
+    metadata:
+      labels: { app: wdc-relay }
+    spec:
+      containers:
+        - name: relay
+          image: SEU_REGISTRY/web-device-connections-relay:latest
+          ports:
+            - containerPort: 8000
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: REDIS_URL
+              value: redis://wdc-redis:6379/0
+            # Origins allowed to open a WebSocket. WebSockets bypass CORS, so this
+            # is the equivalent guard. Must list the frontend's public origin.
+            - name: ALLOWED_ORIGINS
+              value: https://painel.exemplo.com
+            - name: LOG_LEVEL
+              value: INFO
+            - name: ALLOW_LEGACY_DEVICES
+              value: "false"
+          envFrom:
+            # RELAY_SECRET must be byte-identical to the frontend's, and
+            # DEVICE_MASTER_SECRET is what every device token derives from.
+            - secretRef:
+                name: wdc-shared-secrets
+          readinessProbe:
+            httpGet: { path: /health, port: 8000 }
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /health, port: 8000 }
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }
+            limits:   { cpu: 500m, memory: 512Mi }
+      # Devices reconnect on their own, but draining slowly lets in-flight
+      # terminal sessions finish instead of being cut mid-command.
+      terminationGracePeriodSeconds: 60
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: wdc-relay
+spec:
+  selector: { app: wdc-relay }
+  ports:
+    - port: 8000
+      targetPort: 8000
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: wdc-relay
+  annotations:
+    # --- This block is the whole of Option A ---
+    # Pull the device id out of whichever route is being called and use it as the
+    # hash key, so /device/device-01 and /terminal/device-01 land on the same pod.
+    # Hashing on $request_uri instead would send them to different pods, since the
+    # paths differ.
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      set $dev_id "";
+      if ($request_uri ~* "^/(?:device|terminal|file|download)/([^/?]+)") {
+        set $dev_id $1;
+      }
+    nginx.ingress.kubernetes.io/upstream-hash-by: "$dev_id"
+
+    # WebSocket sessions are long-lived; the defaults would cut them after 60s.
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts: [relay.exemplo.com]
+      secretName: wdc-relay-tls
+  rules:
+    - host: relay.exemplo.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: wdc-relay
+                port: { number: 8000 }

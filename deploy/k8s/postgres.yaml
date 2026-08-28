@@ -1,0 +1,87 @@
+# Users and the device registry. Owned by the frontend; the relay never reads it.
+#
+# A single Postgres with a PVC — enough for a fleet console, and the reason the
+# frontend can keep running more than one replica. Create the credentials first:
+#
+#   kubectl create secret generic wdc-postgres \
+#     --from-literal=POSTGRES_USER=wdc \
+#     --from-literal=POSTGRES_PASSWORD="$(openssl rand -base64 24)" \
+#     --from-literal=POSTGRES_DB=wdc
+#
+# Then put the matching URL in wdc-shared-secrets as DATABASE_URL:
+#
+#   postgresql+asyncpg://wdc:<senha>@wdc-postgres:5432/wdc
+#
+# For anything you would be upset to lose, use a managed Postgres instead and
+# point DATABASE_URL at it — this manifest has no backups, no failover, and a
+# single node.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: wdc-postgres-data
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wdc-postgres
+  labels: { app: wdc-postgres }
+spec:
+  replicas: 1
+  # One volume, one writer: a rolling update must not start a second pod against
+  # the same PVC.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels: { app: wdc-postgres }
+  template:
+    metadata:
+      labels: { app: wdc-postgres }
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          ports:
+            - containerPort: 5432
+          envFrom:
+            - secretRef:
+                name: wdc-postgres
+          env:
+            # The image refuses to initialise into a non-empty directory, which
+            # the lost+found in a fresh PVC mount counts as.
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "pg_isready -U $POSTGRES_USER -d $POSTGRES_DB"]
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "pg_isready -U $POSTGRES_USER -d $POSTGRES_DB"]
+            initialDelaySeconds: 20
+            periodSeconds: 30
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits:   { cpu: 1000m, memory: 1Gi }
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: wdc-postgres-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: wdc-postgres
+spec:
+  selector: { app: wdc-postgres }
+  ports:
+    - port: 5432
+      targetPort: 5432

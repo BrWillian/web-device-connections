@@ -1,0 +1,42 @@
+# Minimal Redis for device presence and spent grant ids.
+#
+# Both are ephemeral and TTL-bound: devices re-register on reconnect and grant
+# ids live for seconds, so losing this Redis costs a blip, not data. That is why
+# there is no PersistentVolume here. Swap in a managed Redis for production if
+# you would rather not operate it.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wdc-redis
+  labels: { app: wdc-redis }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: wdc-redis }
+  template:
+    metadata:
+      labels: { app: wdc-redis }
+    spec:
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          args: ["redis-server", "--save", "", "--appendonly", "no"]
+          ports:
+            - containerPort: 6379
+          readinessProbe:
+            exec: { command: ["redis-cli", "ping"] }
+            initialDelaySeconds: 2
+            periodSeconds: 10
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits:   { cpu: 200m, memory: 256Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: wdc-redis
+spec:
+  selector: { app: wdc-redis }
+  ports:
+    - port: 6379
+      targetPort: 6379

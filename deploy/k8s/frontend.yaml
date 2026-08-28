@@ -1,0 +1,85 @@
+# The frontend can just as well run on a laptop under docker compose; this
+# manifest is for when you want it in the cluster alongside the relay.
+#
+# Note the two different relay addresses. RELAY_URL is resolved by this pod
+# (the internal Service). RELAY_WS_URL is resolved by the user's BROWSER and must
+# be the ingress host — the Service would round-robin and land WebSocket upgrades
+# on the wrong replica.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wdc-frontend
+  labels: { app: wdc-frontend }
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: wdc-frontend }
+  template:
+    metadata:
+      labels: { app: wdc-frontend }
+    spec:
+      containers:
+        - name: frontend
+          image: SEU_REGISTRY/web-device-connections-frontend:latest
+          ports:
+            - containerPort: 3000
+          env:
+            - name: RELAY_URL
+              value: http://wdc-relay:8000        # server-to-server
+            - name: RELAY_WS_URL
+              value: wss://relay.exemplo.com      # browser-to-relay, via ingress
+            - name: COOKIE_SECURE
+              value: "true"                       # served over HTTPS
+            # Device revocations are published here for the relay to read. Same
+            # Redis the relay already uses; see frontend/revocation.py for why the
+            # relay is not given access to the database instead.
+            - name: REDIS_URL
+              value: redis://wdc-redis:6379/0
+            - name: LOG_LEVEL
+              value: INFO
+          envFrom:
+            # RELAY_SECRET (shared with the relay), SESSION_SECRET,
+            # ADMIN_PASSWORD_HASH and DATABASE_URL.
+            - secretRef:
+                name: wdc-shared-secrets
+          readinessProbe:
+            httpGet: { path: /healthz, port: 3000 }
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits:   { cpu: 300m, memory: 256Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: wdc-frontend
+spec:
+  selector: { app: wdc-frontend }
+  ports:
+    - port: 3000
+      targetPort: 3000
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: wdc-frontend
+  annotations:
+    # No hashing here: the frontend is stateless and any replica can serve any
+    # request. Only the relay needs device-affinity.
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts: [painel.exemplo.com]
+      secretName: wdc-frontend-tls
+  rules:
+    - host: painel.exemplo.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: wdc-frontend
+                port: { number: 3000 }

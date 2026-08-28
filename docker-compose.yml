@@ -1,0 +1,92 @@
+# Full stack: redis + relay + frontend.
+# To exercise the relay on its own (two replicas, no UI), use server/docker-compose.yml.
+#
+#   cp server/.env.example server/.env      # fill RELAY_SECRET + DEVICE_MASTER_SECRET
+#   cp frontend/.env.example frontend/.env  # the SAME RELAY_SECRET, plus SESSION_SECRET
+#   docker compose up -d
+#
+# Open http://localhost:3000 — admin / admin by default.
+services:
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: wdc
+      POSTGRES_PASSWORD: wdc
+      POSTGRES_DB: wdc
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wdc -d wdc"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  relay:
+    build:
+      context: ./server
+    ports:
+      - "8000:8000"
+    environment:
+      POD_NAME: compose-relay
+      REDIS_URL: redis://redis:6379/0
+      LOG_LEVEL: INFO
+      ALLOWED_ORIGINS: http://localhost:3000
+    env_file:
+      - ./server/.env
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "3000:3000"
+    environment:
+      # Resolved by this container, over the compose network.
+      RELAY_URL: http://relay:8000
+      # Resolved by the BROWSER, so the published host port — not "relay".
+      RELAY_WS_URL: ws://localhost:8000
+      DATABASE_URL: postgresql+asyncpg://wdc:wdc@postgres:5432/wdc
+      # The frontend publishes device revocations here; the relay reads them.
+      # Same Redis, because it is already shared infrastructure for both.
+      REDIS_URL: redis://redis:6379/0
+      APP_NAME: Device Connections
+      LOG_LEVEL: INFO
+    env_file:
+      - ./frontend/.env
+    depends_on:
+      relay:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # The client normally runs on the device itself. Uncomment to exercise
+  # the whole loop locally; it needs DEVICE_TOKEN from
+  # `python -m tools.mint_device_token <id>` run in server/.
+  # client:
+  #   build:
+  #     context: ./client
+  #   env_file:
+  #     - ./client/.env
+  #   environment:
+  #     SERVER_URL: ws://relay:8000/device
+  #   depends_on:
+  #     - relay
+  #   restart: unless-stopped
+
+volumes:
+  pgdata:

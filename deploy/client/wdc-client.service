@@ -1,0 +1,43 @@
+# systemd unit for the device agent. Installed to /etc/systemd/system by
+# deploy/client/install.sh, which fills in the User= line.
+#
+# Deliberately NOT sandboxed with ProtectHome, PrivateTmp or ProtectSystem: the
+# whole point of this agent is to hand an operator a real shell on this machine,
+# as this user, in this filesystem. A sandbox here would not add security — the
+# shell it serves is the trust boundary, and that is enforced by the relay's
+# device token and by ALLOWED_ROOTS in the environment file.
+
+[Unit]
+Description=Web Device Connections device agent
+Documentation=https://github.com/solinftec/web_device_connections
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=__WDC_USER__
+EnvironmentFile=/etc/wdc-client/client.env
+WorkingDirectory=/opt/wdc-client
+ExecStart=/opt/wdc-client/venv/bin/python -m wdc_client
+
+# The agent reconnects on its own with backoff, so Restart= only has to cover
+# the process actually dying. RestartSec stays short because the agent's own
+# backoff is what protects the relay from a restart storm.
+Restart=always
+RestartSec=5
+
+# SIGTERM is what the agent installs a handler for: it closes the terminal
+# sessions and the socket instead of leaving PTYs behind and the device marked
+# online until the relay's presence entry expires.
+KillSignal=SIGTERM
+TimeoutStopSec=20
+
+NoNewPrivileges=yes
+
+# journald keeps the logs, so no file to rotate.
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=wdc-client
+
+[Install]
+WantedBy=multi-user.target
