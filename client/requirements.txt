@@ -1,0 +1,4 @@
+# Deliberately minimal: this runs on the devices themselves. Nothing here needs
+# a compiler, so `pip install` works on an armv7 board without a Rust toolchain.
+websockets==15.0.1
+python-dotenv==1.0.0

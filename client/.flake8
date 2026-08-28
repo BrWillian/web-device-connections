@@ -1,0 +1,5 @@
+[flake8]
+# Matches the line length the CI workflow already uses for the repo.
+max-line-length = 127
+max-complexity = 10
+exclude = .git,__pycache__,venv,.pytest_cache

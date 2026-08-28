@@ -1,0 +1,11 @@
+# B604 "shell=True": bandit matches on the keyword name, and every hit here is a
+#       `shell=` argument carrying a path like /bin/sh. No subprocess involved.
+# B606 "process without a shell": shell.py execs the shell deliberately —
+#       serving an interactive terminal is what this agent is for. The exec'd
+#       path comes from the device's own configuration, never from the relay.
+skips:
+  - B604
+  - B606
+exclude_dirs:
+  - tests
+  - venv
